@@ -1,0 +1,60 @@
+BD MEDICINE DATABASE SAAS
+=========================
+
+📁 / (Root Directory)
+├── 📄 package.json          [Dependencies and CLI scripts]
+├── 📄 tsconfig.json         [TypeScript config (ESM strict)]
+├── 📄 drizzle.config.ts     [Drizzle ORM settings]
+├── 📄 project_plan.md       [Our complete roadmap and task tracking]
+├── 📄 Project-map.txt       [This file - Architecture map]
+│
+├── 📁 .github/workflows/
+│   └── 📄 incremental-scrape.yml  [Automated Cloud Worker (runs 24 times/day)]
+│
+├── 📁 data/                 [Local Storage & Output]
+│   ├── 📄 medicine.db       [SQLite Database - The robust source of truth]
+│   └── 📁 exports/          [Auto-generated exports for public usage]
+│       ├── 📄 medicines.json
+│       └── 📄 medicines.csv
+│
+└── 📁 src/                  [Application Source Code]
+    │
+    ├── 📄 config.ts         [Env vars, URLs, Scraper timing constants]
+    ├── 📄 stats.ts          [CLI tool to view current DB statistics]
+    │
+    ├── 📁 db/               [Database Layer]
+    │   ├── 📄 connection.ts [SQLite connection in WAL mode]
+    │   ├── 📄 schema.ts     [Drizzle Schema: medicines, generics, companies, etc.]
+    │   ├── 📄 init.ts       [Script to create tables via DDL]
+    │   └── 📄 operations.ts [Database insertion & upsertion logic]
+    │
+    ├── 📁 scraper/          [Data Extraction Layer]
+    │   ├── 📄 http-client.ts[Fetch wrapper with retries & random User-Agents]
+    │   ├── 📄 parsers.ts    [Cheerio logic for parsing HTML to JSON]
+    │   ├── 📄 medex-listing.ts [Phase 1: A-Z concurrent listing crawler]
+    │   ├── 📄 medex-detail.ts  [Phase 2: Single URL visitor for price/composition]
+    │   ├── 📄 run-listing.ts   [CLI runner for Phase 1]
+    │   ├── 📄 run-detail.ts    [CLI runner for Phase 2 (supports chunking)]
+    │   ├── 📄 test-quick.ts    [Unit test for listing parser]
+    │   └── 📄 test-detail-quick.ts [Unit test for detail parser]
+    │
+    ├── 📁 validators/       [Data Safety Layer]
+    │   └── 📄 medicine.ts   [Zod schemas to ensure strict typing of scraped data]
+    │
+    └── 📁 export/           [Data Distribution Layer]
+        ├── 📄 to-json.ts    [Converts SQLite tables to deeply nested JSON]
+        ├── 📄 to-csv.ts     [Converts SQLite tables to flat CSV files]
+        └── 📄 run-all-exports.ts [Runs all exporters sequentially]
+
+--------------------------------------------------------------------------------
+🔄 SYSTEM WORKFLOW
+--------------------------------------------------------------------------------
+1. GitHub Action triggers `pnpm run scrape:detail --time-limit=55`
+2. Scraper queries `medicine.db` for unenriched URLs (unit_price is NULL).
+3. HTTP Client fetches HTML (with delays to avoid bans).
+4. Cheerio parses HTML into Zod validated objects.
+5. Drizzle updates `medicine.db`.
+6. GitHub Action runs `pnpm run export:all` -> Updates JSON/CSV.
+7. GitHub Action commits and pushes changes.
+8. (Future) Supabase sync script pushes new changes to cloud Postgres.
+9. (Future) Next.js web app consumes from Supabase API.

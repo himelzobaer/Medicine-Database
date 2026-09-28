@@ -1,0 +1,51 @@
+name: Incremental Detail Scrape (Cloud Worker)
+
+on:
+  schedule:
+    # Runs every hour (24 times a day)
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    # Allows you to trigger it manually from the GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Required to push changes back to the repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Detail Scrape (55 mins limit)
+        # Runs for max 55 minutes so GitHub Action doesn't time out
+        run: pnpm run scrape:detail --time-limit=55
+
+      - name: Export Data
+        run: pnpm run export:all
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "Medicine Bot"
+          git config --global user.email "bot@medicine-db.com"
+          git add data/
+          # If there are changes, commit and push them
+          git diff --staged --quiet || git commit -m "chore(data): incremental detail scrape progress [skip ci]"
+          git push
