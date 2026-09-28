@@ -8,8 +8,8 @@ dist/
 .env
 .env.local
 
-# Database files (keep exports, ignore raw DB)
-data/medicine.db
+# Database files (keep exports and main DB, ignore WAL)
+# data/medicine.db  <-- Removed so it gets tracked by Git
 data/medicine.db-wal
 data/medicine.db-shm
 data/raw/
