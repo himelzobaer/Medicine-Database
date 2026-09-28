@@ -2,8 +2,8 @@ name: Incremental Detail Scrape (Cloud Worker)
 
 on:
   schedule:
-    # Runs every hour (24 times a day)
-    - cron: '0 * * * *'
+    # Triggers at the 10th minute, but actual scraping starts randomly between 10-18 mins due to sleep!
+    - cron: '10 */2 * * *'
   workflow_dispatch:
     # Allows you to trigger it manually from the GitHub UI
 
@@ -36,9 +36,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run Detail Scrape (55 mins limit)
-        # Runs for max 55 minutes so GitHub Action doesn't time out
-        run: pnpm run scrape:detail --time-limit=55
+      - name: Organic Delay (Anti-Bot Detection)
+        # Sleeps for a random time between 1 and 480 seconds (up to 8 mins) before starting!
+        run: sleep $((RANDOM % 480 + 1))
+
+      - name: Run Detail Scrape (45 mins limit)
+        # Runs for 45 minutes to give the target server a solid 75-min cool-down period
+        run: pnpm run scrape:detail --time-limit=45
 
       - name: Export Data
         run: pnpm run export:all
